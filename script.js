@@ -83,7 +83,7 @@ class Player {
                     left: "ArrowLeft",
                     right: "ArrowRight",
                     down: "ArrowDown",
-                    fire: "ShiftRight"
+                    fire: "KeyM"
                 };
                 break;
 
