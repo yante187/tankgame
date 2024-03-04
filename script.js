@@ -99,6 +99,7 @@ class Player {
         this.angle = 0;
         this.turning = 0;
         this.forward = 0;
+        this.debounce = 999;
         this.firing = false;
         switch (num) {
 
@@ -154,6 +155,8 @@ class Player {
     }
 
     controller() {
+
+        this.debounce++;
         
         if (this.turning == 1) {
             this.angle += 1;
@@ -174,10 +177,9 @@ class Player {
             this.x += multiplier * Math.sin(rad);
         }
 
-        if (this.firing) {
-            let x = this.x;
-            let y = this.y;
-            Bullet.addBullet("normal", 5, x + 40 * Math.sin(rad), y + -40 * Math.cos(rad), rad);
+        if (this.firing && this.debounce >= 30) {
+            this.debounce = 0;
+            Bullet.addBullet("normal", 5, this.x + 40 * Math.sin(rad), this.y + -40 * Math.cos(rad), rad);
         }
 
     }
@@ -201,6 +203,7 @@ class Bullet {
         this.speed = speed;
         this.angleRad = angleRad;
         this.position = bullets.length;
+        this.id = Math.random();
         console.log(this.position);
 
     }
@@ -216,6 +219,8 @@ class Bullet {
 
     controller() {
 
+        this.debounce++;
+
         this.y -= this.speed * Math.cos(this.angleRad);
         this.x += this.speed * Math.sin(this.angleRad);
 
@@ -228,12 +233,7 @@ class Bullet {
 
     remove() {
 
-        for (let i = 0; i < bullets.length; i++) {
-            if (bullets[i] == this) {
-                bullets = bullets.splice(i, 1);
-                break;
-            }
-        }
+        bullets = bullets.filter(bullet => bullet.id != this.id);
 
     }
 
@@ -270,14 +270,21 @@ function prepare() {
         }
     }
     players.push(new Player(1));
+    players.push(new Player(2));
 
     Controller.keyboardListener();
 
 }
 
+let lastFrame = performance.now();
 
 function loop() {
-    
+
+    // const dt = (performance.now() - lastFrame) / 1000;
+    // lastFrame = performance.now();
+
+    // console.log(1 / dt);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const wall of walls) wall.draw();
     for (const player of players) {
@@ -292,7 +299,13 @@ function loop() {
 
 }
 
+setTimeout(() => {
+    prepare();
+    loop();
+}, 100);
 
-new Promise(resolve => setTimeout(resolve, 100)).then(() => { prepare(); loop(); });
+
+
+// new Promise(resolve => setTimeout(resolve, 100)).then(() => { prepare(); loop(); });
 // prepare();
 // loop();
