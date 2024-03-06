@@ -146,6 +146,9 @@ class Player {
 
     draw() {
 
+        // ctx.fillStyle = "indigo";
+        // ctx.fillRect(this.x - 19, this.y - 17, 35, 36);
+
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle * (Math.PI / 180));
         ctx.drawImage(this.tank, -14, -33);
@@ -197,18 +200,21 @@ class Bullet {
 
     constructor(type, speed, x, y, angleRad) {
         
+        this.id = Math.random();
         this.x = x;
         this.y = y;
         this.type = type;
         this.speed = speed;
         this.angleRad = angleRad;
         this.position = bullets.length;
-        this.id = Math.random();
-        console.log(this.position);
+        this.halflife = 0;
 
     }
 
     draw() {
+
+        // ctx.fillstyle = "green";
+        // ctx.fillRect(this.x - 3, this.y - 3, 6, 6);
 
         ctx.beginPath();
         ctx.fillStyle = "black";
@@ -219,15 +225,30 @@ class Bullet {
 
     controller() {
 
-        this.debounce++;
-
+        this.halflife ++;
+        
         this.y -= this.speed * Math.cos(this.angleRad);
         this.x += this.speed * Math.sin(this.angleRad);
-
-        console.log(bullets.length);
-
-        if (this.x > 800 || this.x < 0) this.remove();
-        if (this.y > 800 || this.y < 0) this.remove();
+        
+        for (const wall of walls) {
+            // console.log(wall.x);
+            // console.log("wall.x: " + (wall.x <= this.x - 3));
+            // console.log("wall.x + wall.width: " + (wall.x + wall.width >= this.x + 3));
+            // console.log("wall.y: " + (wall.y <= this.y - 3)); // UNDER
+            // console.log("wall.y + wall.height: " + (wall.y + wall.height >= this.y + 3)); // OVER
+            if (wall.x <= this.x - 3 && wall.x + wall.width >= this.x + 3) {
+                if (wall.y <= this.y - 3 && wall.y + wall.height >= this.y + 3) {
+                    console.log("collision");
+                    this.y += this.speed * Math.cos(this.angleRad);
+                    this.x -= this.speed * Math.sin(this.angleRad);
+                    this.speed *= -1;
+                    console.log(this.angleRad);
+                    this.angleRad = this.angleRad;
+                }
+            }
+        }
+        
+        if (this.x > 800 || this.x < 0 || this.y > 800 || this.y < 0 || this.halflife > 300) this.remove();
 
     }
 
@@ -263,14 +284,16 @@ class Wall {
 
 function prepare() {
 
-    for (let i = 0; i < 11; i++) {
-        for (let v = 0; v < 11; v++) {
-            walls.push(new Wall(i * 80, v * 80 - 2.5, 80, 5));
-            walls.push(new Wall(i * 80, v * 80, 5, 80))
-        }
-    }
+    // for (let i = 0; i < 11; i++) {
+    //     for (let v = 0; v < 11; v++) {
+    //         walls.push(new Wall(i * 80, v * 80 - 2.5, 80, 5));
+    //         walls.push(new Wall(i * 80, v * 80, 5, 80))
+    //     }
+    // }
+    walls.push(new Wall(150, 250, 550, 10));
+    walls.push(new Wall(500, 50, 10, 550));
     players.push(new Player(1));
-    players.push(new Player(2));
+    // players.push(new Player(2));
 
     Controller.keyboardListener();
 
