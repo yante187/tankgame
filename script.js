@@ -1,3 +1,13 @@
+/*
+
+TODO
+- fix bullets stuck against edgepieces of walls
+- flex hitboxes
+- game end
+
+*/
+
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -14,6 +24,7 @@ greenTank.src = "./images/greenTank.png";
 let walls = [];
 let players = [];
 let bullets = [];
+let gameOver = 0;
 
 
 class Controller {
@@ -91,11 +102,11 @@ class Controller {
 
 class Player {
 
-    constructor(num) {
+    constructor(num, x = 130, y = 170) {
 
         this.playerNum = num;
-        this.x = 130;
-        this.y = 170;
+        this.x = x;
+        this.y = y;
         this.angle = 0;
         this.turning = 0;
         this.forward = 0;
@@ -151,8 +162,8 @@ class Player {
 
     draw() {
 
-        // ctx.fillStyle = "indigo";
-        // ctx.fillRect(this.x - 19, this.y - 17, 35, 36);
+        ctx.strokeStyle = "red";
+        ctx.strokeRect(this.x - 19, this.y - 17, 35, 36);
 
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle * (Math.PI / 180));
@@ -191,9 +202,24 @@ class Player {
             this.x += multiplier * Math.sin(rad);
         }
 
-        if (this.firing && this.debounce >= 30) {
+        for (const wall of walls) {
+            if (this.x + 16 >= wall.x && this.x - 19 <= wall.x + wall.width) {
+                if (this.y + 19 >= wall.y && this.y - 17 <= wall.y + wall.height) {
+                    // console.log("tank hitting wall");
+                    if (this.forward == 1) {
+                        this.y -= multiplier * Math.cos(rad);
+                        this.x += multiplier * Math.sin(rad);
+                    } else if (this.forward == -1) { // up
+                        this.y += multiplier * Math.cos(rad);
+                        this.x -= multiplier * Math.sin(rad);
+                    }
+                }
+            }
+        }
+
+        if (this.firing && this.debounce >= 10) {
             this.debounce = 0;
-            Bullet.addBullet("normal", 5, this.x + 40 * Math.sin(rad), this.y + -40 * Math.cos(rad), rad);
+            Bullet.addBullet("normal", 5, this.x + 40 * Math.sin(rad), this.y + -40 * Math.cos(rad), rad, this.playerNum);
         }
 
     }
@@ -202,15 +228,14 @@ class Player {
 
         this.hit = true;
         this.debounce = -999;
-        if (players.length <= 2) for (const player of players) player.enabled = false;
-        else this.enabled = false;
+        this.enabled = false;
 
         this.hitFrames++;
 
         ctx.drawImage(this.explosionImg, this.x - 43, this.y - 48, this.explosionImg.width * 2, this.explosionImg.height * 2);
 
         if (this.hitFrames > 90) {
-            players = players.filter(player => player.id != this.id);
+            players = players.filter(player => player.playerNum != this.playerNum);
             if (players.length < 2) endGame();
         }
 
@@ -221,13 +246,13 @@ class Player {
 
 class Bullet {
 
-    static addBullet(type, speed, x, y, angleRad) {
+    static addBullet(type, speed, x, y, angleRad, playerNum) {
 
-        bullets.push(new Bullet(type, speed, x, y, angleRad));
+        bullets.push(new Bullet(type, speed, x, y, angleRad, playerNum));
 
     }
 
-    constructor(type, speed, x, y, angleRad) {
+    constructor(type, speed, x, y, angleRad, playerNum) {
         
         this.id = Math.random();
         this.x = x;
@@ -239,6 +264,8 @@ class Bullet {
         this.angleRad = angleRad;
         this.position = bullets.length;
         this.halflife = 0;
+        this.trail = [];
+        this.color = ((playerNum == 1) ? "red" : (playerNum == 2) ? "blue" : "green");
 
     }
 
@@ -248,9 +275,14 @@ class Bullet {
         // ctx.fillRect(this.x - 3, this.y - 3, 6, 6);
 
         ctx.beginPath();
-        ctx.fillStyle = "black";
+        ctx.fillStyle = this.color;
         ctx.arc(this.x, this.y, 3, 0, 2 * Math.PI);
         ctx.fill();
+
+        ctx.fillStyle = this.color;
+        for (const t of this.trail) ctx.fillRect(t[0] - 1, t[1] - 1, 2, 2);
+        this.trail.push([this.x, this.y]);
+        if (this.trail.length >= 30) this.trail.shift();
 
     }
 
@@ -271,9 +303,9 @@ class Bullet {
                 // if (wall.y <= this.y - 3 && wall.y + wall.height >= this.y + 3) {
             if (this.x + 3 >= wall.x && this.x - 3 <= wall.x + wall.width) {
                 if (this.y + 3 >= wall.y && this.y - 3 <= wall.y + wall.height) {
-                    console.log("collision");
-                    this.y += this.speed * Math.cos(this.angleRad);
-                    this.x -= this.speed * Math.sin(this.angleRad);
+                    // console.log("collision");
+                    this.y += this.speed * Math.cos(this.angleRad) * this.yF;
+                    this.x -= this.speed * Math.sin(this.angleRad) * this.xF;
                     if (wall.width == 10) this.xF *= -1;
                     if (wall.height == 10) this.yF *= -1;
                     // console.log(this.yF);
@@ -295,7 +327,7 @@ class Bullet {
             }
         }
         
-        if (this.x > 800 || this.x < 0 || this.y > 800 || this.y < 0 || this.halflife > 300) this.remove();
+        if (this.x > 800 || this.x < 0 || this.y > 800 || this.y < 0 || this.halflife > 900) this.remove();
 
     }
 
@@ -331,7 +363,17 @@ class Wall {
 
 function endGame() {
 
-    //
+    if (players.length > 0) {
+        console.log(`player ${players[0].playerNum} wins`);
+    } else {
+        console.log("all players dead");
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    players = [];
+
+    prepare();
 
 }
 
@@ -344,10 +386,16 @@ function prepare() {
     //         walls.push(new Wall(i * 80, v * 80, 5, 80))
     //     }
     // }
+    walls.push(new Wall(0, 0, 800, 10));
+    walls.push(new Wall(0, 0, 10, 800));
+    walls.push(new Wall(0, 790, 800, 10));
+    walls.push(new Wall(790, 0, 10, 800));
+
     walls.push(new Wall(150, 250, 550, 10));
     walls.push(new Wall(500, 50, 10, 550));
-    players.push(new Player(1));
-    // players.push(new Player(2));
+    players.push(new Player(1, 450, 200));
+    players.push(new Player(2, 550, 200));
+    players.push(new Player(3, 550, 325));
 
     Controller.keyboardListener();
 
