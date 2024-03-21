@@ -161,25 +161,22 @@ class Player {
     }
 
     draw() {
-
         ctx.strokeStyle = "red";
         ctx.strokeRect(this.x - 19, this.y - 17, 35, 36);
 
+        ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle * (Math.PI / 180));
         ctx.drawImage(this.tank, -14, -33);
-        ctx.rotate(-(this.angle * (Math.PI / 180)));
-        ctx.translate(-this.x, -this.y);
-
+        ctx.restore();
     }
 
     controller() {
-
-        if (this.hit) {
-            this.damage();
+        if (this.hit)
+            return this.damage();
+        
+        if (!this.enabled) 
             return;
-        }
-        if (!this.enabled) return;
 
         this.debounce++;
         
@@ -263,10 +260,10 @@ class Bullet {
         this.speed = speed;
         this.angleRad = angleRad;
         this.position = bullets.length;
-        this.halflife = 0;
         this.trail = [];
         this.color = ((playerNum == 1) ? "red" : (playerNum == 2) ? "blue" : "green");
 
+        setTimeout(this.remove, 5000);
     }
 
     draw() {
@@ -286,10 +283,7 @@ class Bullet {
 
     }
 
-    controller() {
-
-        this.halflife ++;
-        
+    controller() {        
         this.y -= this.speed * Math.cos(this.angleRad) * this.yF;
         this.x += this.speed * Math.sin(this.angleRad) * this.xF;
         
@@ -327,7 +321,8 @@ class Bullet {
             }
         }
         
-        if (this.x > 800 || this.x < 0 || this.y > 800 || this.y < 0 || this.halflife > 900) this.remove();
+        if (this.x > 800 || this.x < 0 || this.y > 800 || this.y < 0)
+            this.remove();
 
     }
 
@@ -363,11 +358,10 @@ class Wall {
 
 function endGame() {
 
-    if (players.length > 0) {
+    if (players.length > 0)
         console.log(`player ${players[0].playerNum} wins`);
-    } else {
+    else
         console.log("all players dead");
-    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
